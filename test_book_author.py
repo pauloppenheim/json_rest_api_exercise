@@ -162,6 +162,32 @@ class TestBookAuthorAcceptance(unittest.TestCase):
         res = self.app.put(a1_url, json.dumps(b2), content_type=self.ctype, status=200)
         res = self.app.get(q_url, status=200)
         self.assertEqual(res.json, [q2, q1])
+    
+    
+    def test_url_author_post(self):
+        # Test POST an entity url - /entity/idstr/date/
+        b1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
+        a1_url = '/author/Edward R. Tufte/1942'
+        res = self.app.post(a1_url, json.dumps(b1), content_type=self.ctype, status=201)
+        self.assertTrue(len(res.headerlist) > 0)
+        self.assertNotEqual(res.body, '')
+        self.assertEqual(res.json, b1)
+    
+    
+    def test_some_bad_requests(self):
+        # Clearly not internet-strength, but some accident safety
+        b1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
+        b2 = [{"title": "Envisioning Information", "pubdate": 1990}]
+        a1 = [{"name": "Edward R. Tufte", "dob": 1942}]
+        a1_url = '/author/Edward R. Tufte/1942'
+        b1_url = '/book/The Visual Display of Quantitative Information/1983'
+        b2_url = '/book/Envisioning Information/1990'
+        
+        q_url = '/query/author_by_books'
+        
+        # Wrong content-type - should 406
+        res = self.app.post(a1_url, json.dumps(b1), status=406)
+        self.assertEqual(res.json, [])
 
 
 

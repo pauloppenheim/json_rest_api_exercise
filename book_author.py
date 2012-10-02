@@ -101,7 +101,7 @@ GET - list the entities sorted by the number of relations each has.
 import wsgiref.util
 import cgi
 import json
-
+import sys
 
 # ------------------------------------------------------------
 # ------------------------------------------------------------
@@ -132,14 +132,18 @@ class BookAuthor(object):
         if len(path) > 2:
             date = path[2]
         
-        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+        c_type = environ.get("CONTENT_TYPE")
+        json_c_type = "application/json"
+        req_method = environ.get("REQUEST_METHOD")
+        form = None
+        if req_method in ["POST", "PUT"]:
+            form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
         in_rels = []
-        if 0 < form.length:
+        if None != form and 0 < form.length and json_c_type == c_type:
             in_rels = json.loads(form.value)
         
-        created, updated, deleted = False, False, False
-        request_method = environ.get("REQUEST_METHOD", "")
         status = '200 OK'
+        created, updated, deleted = False, False, False
         rels = []
         entities = ['author', 'book']
         
@@ -147,37 +151,41 @@ class BookAuthor(object):
         if ((entity in entities and idstr != None and date != None) or
                 (entity == "query" and idstr != None)):
             if "author" == entity:
-                if "PUT" == request_method or "POST" == request_method:
+                if req_method in ["POST", "PUT"]:
                     created, updated = self.storage.author_create(idstr, date, in_rels)
                     rels = self.storage.author_read_items(idstr, date)
-                elif "GET" == request_method:
+                elif "GET" == req_method:
                     rels = self.storage.author_read_items(idstr, date)
-                elif "DELETE" == request_method:
+                elif "DELETE" == req_method:
                     rels = self.storage.author_read_items(idstr, date)
                     deleted = self.storage.author_delete(idstr, date)
             elif "book" == entity:
-                if "PUT" == request_method or "POST" == request_method:
+                if req_method in ["POST", "PUT"]:
                     created, updated = self.storage.book_create(idstr, date, in_rels)
                     rels = self.storage.book_read_items(idstr, date)
-                elif "GET" == request_method:
+                elif "GET" == req_method:
                     rels = self.storage.book_read_items(idstr, date)
-                elif "DELETE" == request_method:
+                elif "DELETE" == req_method:
                     rels = self.storage.book_read_items(idstr, date)
                     deleted = self.storage.book_delete(idstr, date)
             elif "query" == entity:
-                if "GET" == request_method and "author_by_books" == idstr:
+                if "GET" == req_method and "author_by_books" == idstr:
                     rels = self.storage.author_by_books()
+                elif "GET" == req_method and "book_by_authors" == idstr:
+                    rels = self.storage.book_by_authors()
         else:
             status  = '404 Not Found'
         
-        # this needs to be a hint more complicated...
         if 0 == len(rels):
             status = '404 Not Found'
         
         if created:
             status = '201 Created'
         
-        headers = [('Content-type', 'application/json')]
+        if c_type != None and json_c_type != c_type and req_method in ["POST", "PUT"]:
+            status = '406 Not Acceptable'
+        
+        headers = [('Content-type', json_c_type)]
         start_response(status, headers)
         r_str = json.dumps(
             rels,
@@ -321,6 +329,29 @@ class BookAuthorMemStorage(object):
         return a
 
 
+
+if __name__ == "__main__":
+    #CGI wsgiref server
+    """
+    from wsgiref.handlers import CGIHandler
+    CGIHandler().run(application)
+    """
+    
+    # Non-cgi ONLY - status printing for WSGI servers
+    #"""
+    server_address = sys.argv[1]
+    server_port = int(sys.argv[2])
+    server_pair = (server_address, server_port)
+    print "Serving on port %s..." % server_port
+    #"""
+    
+    #wsgiref server
+    #"""
+    print "using wsgiref"
+    import wsgiref.simple_server
+    httpd = wsgiref.simple_server.make_server(server_address, server_port, BookAuthor())
+    httpd.serve_forever()
+    #"""
 
 
 
