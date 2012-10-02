@@ -204,7 +204,7 @@ class TestBookAuthorInternals(unittest.TestCase):
         deleted = self.store.author_delete("a1", 1)
         # is author deleted?
         b = self.store.author_read("a1", 1)
-        self.assertEqual(len(b), 0)
+        self.assertEqual(len(b), 0)                                        
         # is symmetric book deleted?
         a = self.store.book_read("b1", 1)
         self.assertEqual(len(a), 0)
@@ -215,6 +215,38 @@ class TestBookAuthorInternals(unittest.TestCase):
         self.assertEqual(len(self.store.authors), 0)
         self.assertFalse(created)
         self.assertFalse(updated)
+    
+    
+    def test_author_by_books(self):
+        # empty - zero
+        a = self.store.author_by_books()
+        self.assertEqual(len(a), 0)
+        
+        # add a book
+        b1 = [{"title": "b1", "pubdate": 1}]
+        created, updated = self.store.author_create("a1", 1, b1)
+        a = self.store.author_by_books()
+        self.assertEqual(len(a), 1)
+        
+        # add a new author with two books - should be first
+        created, updated = self.store.author_create("a2", 1, b1)
+        b2 = [{"title": "b2", "pubdate": 1}]
+        created, updated = self.store.author_create("a2", 1, b2)
+        a = self.store.author_by_books()
+        self.assertEqual(len(a), 2)
+        self.assertEqual(a[0], (("a2", 1), 2))
+        
+        # add another author, who then gets prolific
+        created, updated = self.store.author_create("a3", 1, b1)
+        a = self.store.author_by_books()
+        self.assertEqual(len(a), 3)
+        self.assertEqual(a[0], (("a2", 1), 2))
+        created, updated = self.store.author_create("a3", 1, b2)
+        b3 = [{"title": "b3", "pubdate": 1}]
+        created, updated = self.store.author_create("a3", 1, b3)
+        a = self.store.author_by_books()
+        self.assertEqual(len(a), 3)
+        self.assertEqual(a[0], (("a3", 1), 3))
 
 
 

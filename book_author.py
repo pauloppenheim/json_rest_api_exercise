@@ -246,6 +246,14 @@ def entity_delete(idstr, date, entities, entities_opposite):
     return True
 
 
+def entity_by_rels(entities):
+    a = map(lambda x: (x, len(entities[x])), entities.iterkeys())
+    ent_cmp = lambda a,b: cmp(a[1], b[1])
+    a.sort(ent_cmp)
+    a.reverse()
+    return a
+
+
 
 class BookAuthorMemStorage(object):
     def __init__(self):
@@ -293,6 +301,13 @@ class BookAuthorMemStorage(object):
     
     def book_delete(self, title, pubdate):
         return entity_delete(title, pubdate, self.books, self.authors)
+    
+    
+    def author_by_books(self):
+        return entity_by_rels(self.authors)
+    
+    def book_by_authors(self):
+        return entity_by_rels(self.books)
 
 
 
