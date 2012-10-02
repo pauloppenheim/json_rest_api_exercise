@@ -101,7 +101,6 @@ GET - list the entities sorted by the number of relations each has.
 import wsgiref.util
 import cgi
 import json
-import StringIO
 
 
 # ------------------------------------------------------------
@@ -110,108 +109,84 @@ import StringIO
 # ------------------------------------------------------------
 # ------------------------------------------------------------
 
-
-def application(environ, start_response):
-    status = '200 OK'
-    headers = [('Content-type', 'application/json')]
+class BookAuthor(object):
     
-    env = ["%s: %s\n" % (key, value)
-            for key, value in environ.iteritems()]
-    headers.append(("X-Debug-Env", json.dumps(env)))
+    def __init__(self):
+        self.storage = BookAuthorMemStorage()
     
-    pathenv = {'PATH_INFO': environ.get('PATH_INFO')}
-    path = []
-    p = wsgiref.util.shift_path_info(pathenv)
-    while p is not None:
-        path.append(p)
+    
+    def __call__(self, environ, start_response):
+        status = '200 OK'
+        headers = [('Content-type', 'application/json')]
+        
+        path = []
+        # shift_path_info is destructive, pass it a copy
+        pathenv = {'PATH_INFO': environ.get('PATH_INFO')}
         p = wsgiref.util.shift_path_info(pathenv)
-    
-    headers.append(("X-Debug-Path", json.dumps(path)))
-    entities = ['author', 'book']
-    entity = None
-    idstr = None
-    date = None
-    rels = []
-    if len(path) > 0:
-        entity = path[0]
-    if len(path) > 1:
-        idstr = path[1]
-    if len(path) > 2:
-        date = path[2]
-    
-    iostr = StringIO.StringIO(environ['wsgi.input'].read())
-    form = cgi.FieldStorage(fp=iostr, environ=environ)
-    in_rels = []
-    if 0 < form.length:
-        in_rels = json.loads(form.value)
-    
-    created, updated, deleted = False, False, False
-    request_method = environ.get("REQUEST_METHOD", "")
-    
-    """
-    print
-    print request_method
-    print path
-    print iostr.getvalue()
-    print form
-    print in_rels
-    print
-    """
-    
-    # dispatch
-    if (entity is not None and
-            idstr is not None and
-            date is not None and
-            entity in entities):
-        if "author" == entity:
-            if "PUT" == request_method or "POST" == request_method:
-                created, updated = storage.author_create(idstr, date, in_rels)
-                rels = storage.author_read_items(idstr, date)
-            elif "GET" == request_method:
-                rels = storage.author_read_items(idstr, date)
-            elif "DELETE" == request_method:
-                rels = storage.author_read_items(idstr, date)
-                deleted = storage.author_delete(idstr, date)
-        elif "book" == entity:
-            if "PUT" == request_method or "POST" == request_method:
-                created, updated = storage.book_create(idstr, date, in_rels)
-                rels = storage.book_read_items(idstr, date)
-            elif "GET" == request_method:
-                rels = storage.book_read_items(idstr, date)
-            elif "DELETE" == request_method:
-                rels = storage.book_read_items(idstr, date)
-                deleted = storage.book_delete(idstr, date)
-    else:
-        status  = '404 Not Found'
-    
-    # this needs to be a hint more complicated...
-    if 0 == len(rels):
-        status = '404 Not Found'
-    
-    if created:
-        status = '201 Created'
-    
-    start_response(status, headers)
-    r_str = json.dumps(
-        rels,
-        sort_keys=True,
-        indent=4,
-        default = json_handler
-    )
-    # wsgi: return iterable
-    return [r_str]
+        while p is not None:
+            path.append(p)
+            p = wsgiref.util.shift_path_info(pathenv)
+        
+        entities = ['author', 'book']
+        entity, idstr, date = None, None, None
+        rels = []
+        if len(path) > 0:
+            entity = path[0]
+        if len(path) > 1:
+            idstr = path[1]
+        if len(path) > 2:
+            date = path[2]
+        
+        form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+        in_rels = []
+        if 0 < form.length:
+            in_rels = json.loads(form.value)
+        
+        created, updated, deleted = False, False, False
+        request_method = environ.get("REQUEST_METHOD", "")
+        
+        # dispatch
+        if (entity is not None and
+                idstr is not None and
+                date is not None and
+                entity in entities):
+            if "author" == entity:
+                if "PUT" == request_method or "POST" == request_method:
+                    created, updated = self.storage.author_create(idstr, date, in_rels)
+                    rels = self.storage.author_read_items(idstr, date)
+                elif "GET" == request_method:
+                    rels = self.storage.author_read_items(idstr, date)
+                elif "DELETE" == request_method:
+                    rels = self.storage.author_read_items(idstr, date)
+                    deleted = self.storage.author_delete(idstr, date)
+            elif "book" == entity:
+                if "PUT" == request_method or "POST" == request_method:
+                    created, updated = self.storage.book_create(idstr, date, in_rels)
+                    rels = self.storage.book_read_items(idstr, date)
+                elif "GET" == request_method:
+                    rels = self.storage.book_read_items(idstr, date)
+                elif "DELETE" == request_method:
+                    rels = self.storage.book_read_items(idstr, date)
+                    deleted = self.storage.book_delete(idstr, date)
+        else:
+            status  = '404 Not Found'
+        
+        # this needs to be a hint more complicated...
+        if 0 == len(rels):
+            status = '404 Not Found'
+        
+        if created:
+            status = '201 Created'
+        
+        start_response(status, headers)
+        r_str = json.dumps(
+            rels,
+            sort_keys=True,
+            indent=4
+        )
+        # wsgi: return iterable
+        return [r_str]
 
-
-def json_handler(obj):
-    """
-    handle non-native JSON object types:
-    * set -> reasonable str
-    """
-    if isinstance(obj, set):
-        return list(obj)
-    else:
-        raise TypeError, 'Type %s (%s) is not JSON serializable' % (
-            type(obj), repr(obj))
 
 
 # ------------------------------------------------------------
@@ -274,16 +249,9 @@ def entity_delete(idstr, date, entities, entities_opposite):
 
 
 class BookAuthorMemStorage(object):
-    books = {}
-    authors = {}
-    
     def __init__(self):
-        self.reset_storage()
-    
-    def reset_storage(self):
         self.books = {}
         self.authors = {}
-    
     
     def author_create(self, author, dob, bookset):
         rels = []
@@ -328,7 +296,6 @@ class BookAuthorMemStorage(object):
         return entity_delete(title, pubdate, self.books, self.authors)
 
 
-storage = BookAuthorMemStorage()
 
 
 

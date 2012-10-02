@@ -35,8 +35,7 @@ Computer Graphics: Principles and Practice in C (2nd Edition)/1995
 class TestBookAuthorAcceptance(unittest.TestCase):
     
     def setUp(self):
-        book_author.storage.reset_storage()
-        self.app = webtest.TestApp(book_author.application)
+        self.app = webtest.TestApp(book_author.BookAuthor())
         self.ctype = "application/json"
     
     
@@ -115,20 +114,23 @@ class TestBookAuthorAcceptance(unittest.TestCase):
         b1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
         b2 = [{"title": "Envisioning Information", "pubdate": 1990}]
         a1 = [{"name": "Edward R. Tufte", "dob": 1942}]
-        author = '/author/Edward R. Tufte/1942'
-        book = '/book/Envisioning Information/1990'
-        s1 = json.dumps(b1)
-        s2 = json.dumps(b2)
-        res = self.app.put(author, s1, content_type=self.ctype, status=201)
-        res = self.app.put(author, s2, content_type=self.ctype, status=200)
-        res = self.app.delete(book, status=200)
+        a1_url = '/author/Edward R. Tufte/1942'
+        b1_url = '/book/The Visual Display of Quantitative Information/1983'
+        b2_url = '/book/Envisioning Information/1990'
+        res = self.app.put(a1_url, json.dumps(b1), content_type=self.ctype, status=201)
+        res = self.app.put(a1_url, json.dumps(b2), content_type=self.ctype, status=200)
+        res = self.app.delete(b2_url, status=200)
         self.assertTrue(len(res.headerlist) > 0)
         self.assertNotEqual(res.body, '')
         # DEL returns the equiv of GET on that book url - aka, the author
         self.assertEqual(res.json, a1)
-        res = self.app.get(author)
+        res = self.app.get(a1_url)
         self.assertTrue(b2[0] not in res.json)
         self.assertTrue(b1[0] in res.json)
+        res = self.app.get(b1_url, status=200)
+        self.assertEqual(res.json, a1)
+        res = self.app.get(b2_url, status=404)
+        self.assertEqual(res.json, [])
 
 
 
