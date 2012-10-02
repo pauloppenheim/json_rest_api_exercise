@@ -6,6 +6,8 @@ import book_author
 import unittest
 import json
 
+# WebTest - http://webtest.pythonpaste.org/en/latest/index.html
+# $ easy_install WebTest
 import webtest
 
 
@@ -110,21 +112,23 @@ class TestBookAuthorAcceptance(unittest.TestCase):
     
     def test_url_author_delete(self):
         # PUT two, DELETE one, GET to verify deletion
-        d1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
-        d2 = [{"title": "Envisioning Information", "pubdate": 1990}]
+        b1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
+        b2 = [{"title": "Envisioning Information", "pubdate": 1990}]
+        a1 = [{"name": "Edward R. Tufte", "dob": 1942}]
         author = '/author/Edward R. Tufte/1942'
         book = '/book/Envisioning Information/1990'
-        s1 = json.dumps(d1)
-        s2 = json.dumps(d2)
+        s1 = json.dumps(b1)
+        s2 = json.dumps(b2)
         res = self.app.put(author, s1, content_type=self.ctype, status=201)
         res = self.app.put(author, s2, content_type=self.ctype, status=200)
         res = self.app.delete(book, status=200)
         self.assertTrue(len(res.headerlist) > 0)
         self.assertNotEqual(res.body, '')
-        self.assertEqual(res.json, d1)
+        # DEL returns the equiv of GET on that book url - aka, the author
+        self.assertEqual(res.json, a1)
         res = self.app.get(author)
-        self.assertTrue(d2[0] not in res.json)
-        self.assertTrue(d1[0] in res.json)
+        self.assertTrue(b2[0] not in res.json)
+        self.assertTrue(b1[0] in res.json)
 
 
 

@@ -101,7 +101,7 @@ GET - list the entities sorted by the number of relations each has.
 import wsgiref.util
 import cgi
 import json
-import pprint
+import StringIO
 
 
 # ------------------------------------------------------------
@@ -139,13 +139,24 @@ def application(environ, start_response):
     if len(path) > 2:
         date = path[2]
     
-    form = cgi.FieldStorage(fp=environ['wsgi.input'], environ=environ)
+    iostr = StringIO.StringIO(environ['wsgi.input'].read())
+    form = cgi.FieldStorage(fp=iostr, environ=environ)
     in_rels = []
-    if -1 != form.length:
+    if 0 < form.length:
         in_rels = json.loads(form.value)
     
     created, updated, deleted = False, False, False
-    request_method = environ.get("REQUEST_METHOD", "GET")
+    request_method = environ.get("REQUEST_METHOD", "")
+    
+    """
+    print
+    print request_method
+    print path
+    print iostr.getvalue()
+    print form
+    print in_rels
+    print
+    """
     
     # dispatch
     if (entity is not None and
