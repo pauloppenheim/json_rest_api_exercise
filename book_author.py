@@ -116,9 +116,6 @@ class BookAuthor(object):
     
     
     def __call__(self, environ, start_response):
-        status = '200 OK'
-        headers = [('Content-type', 'application/json')]
-        
         path = []
         # shift_path_info is destructive, pass it a copy
         pathenv = {'PATH_INFO': environ.get('PATH_INFO')}
@@ -127,9 +124,7 @@ class BookAuthor(object):
             path.append(p)
             p = wsgiref.util.shift_path_info(pathenv)
         
-        entities = ['author', 'book']
         entity, idstr, date = None, None, None
-        rels = []
         if len(path) > 0:
             entity = path[0]
         if len(path) > 1:
@@ -144,6 +139,9 @@ class BookAuthor(object):
         
         created, updated, deleted = False, False, False
         request_method = environ.get("REQUEST_METHOD", "")
+        status = '200 OK'
+        rels = []
+        entities = ['author', 'book']
         
         # dispatch
         if (entity is not None and
@@ -178,6 +176,7 @@ class BookAuthor(object):
         if created:
             status = '201 Created'
         
+        headers = [('Content-type', 'application/json')]
         start_response(status, headers)
         r_str = json.dumps(
             rels,
