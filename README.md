@@ -7,22 +7,27 @@ Problem Description
 
 Create a simple REST JSON API that supports the following:
 
-1) An Author resource, A Book resource
-2) A book can have multiple authors
-3) An author can have multiple books
-4) Standard CRUD operations should work in typical RESTful fashion
-5) A method that will return authors sorted by number of books published
-6) Set up a test suite that will test the API
+1. An Author resource, A Book resource
+2. A book can have multiple authors
+3. An author can have multiple books
+4. Standard CRUD operations should work in typical RESTful fashion
+5. A method that will return authors sorted by number of books published
+6. Set up a test suite that will test the API
+
 
 Author Model:
-    name
-    date of birth
-    books
+
+    * name
+    * date of birth
+    * books
+
 
 Book model:
-    title
-    publish date
-    authors
+
+    * title
+    * publish date
+    * authors
+
 
 Notes:
 
