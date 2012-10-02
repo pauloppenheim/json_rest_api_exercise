@@ -144,10 +144,8 @@ class BookAuthor(object):
         entities = ['author', 'book']
         
         # dispatch
-        if (entity is not None and
-                idstr is not None and
-                date is not None and
-                entity in entities):
+        if ((entity in entities and idstr != None and date != None) or
+                (entity == "query" and idstr != None)):
             if "author" == entity:
                 if "PUT" == request_method or "POST" == request_method:
                     created, updated = self.storage.author_create(idstr, date, in_rels)
@@ -166,6 +164,9 @@ class BookAuthor(object):
                 elif "DELETE" == request_method:
                     rels = self.storage.book_read_items(idstr, date)
                     deleted = self.storage.book_delete(idstr, date)
+            elif "query" == entity:
+                if "GET" == request_method and "author_by_books" == idstr:
+                    rels = self.storage.author_by_books()
         else:
             status  = '404 Not Found'
         
@@ -304,10 +305,20 @@ class BookAuthorMemStorage(object):
     
     
     def author_by_books(self):
-        return entity_by_rels(self.authors)
+        t = entity_by_rels(self.authors)
+        # unpack set of tuples
+        a = []
+        for i in t:
+            a.append({"name": i[0][0], "dob": i[0][1], "book_count": i[1]})
+        return a
     
     def book_by_authors(self):
-        return entity_by_rels(self.books)
+        t = entity_by_rels(self.books)
+        # unpack set of tuples
+        a = []
+        for i in t:
+            a.append({"title": i[0][0], "pubdate": i[0][1], "author_count": i[1]})
+        return a
 
 
 

@@ -131,6 +131,37 @@ class TestBookAuthorAcceptance(unittest.TestCase):
         self.assertEqual(res.json, a1)
         res = self.app.get(b2_url, status=404)
         self.assertEqual(res.json, [])
+    
+    
+    def test_url_author_by_books(self):
+        # PUT an author, test, PUT some more, test
+        b1 = [{"title": "The Visual Display of Quantitative Information", "pubdate": 1983}]
+        b2 = [{"title": "Envisioning Information", "pubdate": 1990}]
+        a1 = [{"name": "Edward R. Tufte", "dob": 1942}]
+        a1_url = '/author/Edward R. Tufte/1942'
+        b1_url = '/book/The Visual Display of Quantitative Information/1983'
+        b2_url = '/book/Envisioning Information/1990'
+        
+        a2 = [{"name": "Plato", "dob": -424}]
+        b3 = [{"title": "The Republic", "pubdate": -360}]
+        a2_url = '/author/Plato/-424'
+        b3_url = '/book/The Republic/-360'
+        
+        q_url = '/query/author_by_books'
+        q1 = {"name": "Plato", "dob": -424, "book_count": 1}
+        q2 = {"name": "Edward R. Tufte", "dob": 1942, "book_count": 2}
+        
+        res = self.app.get(q_url, status=404)
+        self.assertEqual(len(res.json), 0)
+        
+        res = self.app.put(a2_url, json.dumps(b3), content_type=self.ctype, status=201)
+        res = self.app.get(q_url, status=200)
+        self.assertEqual(res.json, [q1])
+        
+        res = self.app.put(a1_url, json.dumps(b1), content_type=self.ctype, status=201)
+        res = self.app.put(a1_url, json.dumps(b2), content_type=self.ctype, status=200)
+        res = self.app.get(q_url, status=200)
+        self.assertEqual(res.json, [q2, q1])
 
 
 
@@ -234,19 +265,19 @@ class TestBookAuthorInternals(unittest.TestCase):
         created, updated = self.store.author_create("a2", 1, b2)
         a = self.store.author_by_books()
         self.assertEqual(len(a), 2)
-        self.assertEqual(a[0], (("a2", 1), 2))
+        self.assertEqual(a[0], {'name': 'a2', 'dob': 1, 'book_count': 2})
         
         # add another author, who then gets prolific
         created, updated = self.store.author_create("a3", 1, b1)
         a = self.store.author_by_books()
         self.assertEqual(len(a), 3)
-        self.assertEqual(a[0], (("a2", 1), 2))
+        self.assertEqual(a[0], {'name': 'a2', 'dob': 1, 'book_count': 2})
         created, updated = self.store.author_create("a3", 1, b2)
         b3 = [{"title": "b3", "pubdate": 1}]
         created, updated = self.store.author_create("a3", 1, b3)
         a = self.store.author_by_books()
         self.assertEqual(len(a), 3)
-        self.assertEqual(a[0], (("a3", 1), 3))
+        self.assertEqual(a[0], {'name': 'a3', 'dob': 1, 'book_count': 3})
 
 
 
